@@ -96,12 +96,12 @@ class Baseline_Agent():
 if __name__ == "__main__":
     # this is the training and output for the baseline agent
     agent = Baseline_Agent(actions=[0, 1])
-    agent.train(50000, 100)
+    agent.train(75000, 100)
 
     # read the excel file that has our training results
     baseline_scores = pd.read_csv("/Users/renee/Downloads/FlappyBird_using_RL-master/Scores/baseline.csv", index_col=0)
 
-    i = list(range(0, 50001, 500))[1:]
+    i = list(range(0, 75001, 500))[1:]
     baseline_scores.index = i
 
     # plot the baseline agent results

@@ -126,8 +126,8 @@ class Q_Agent():
         return max_score
 
 if __name__ == "__main__":
-    #agent = Q_Agent(actions=[0, 1])
-    #agent.train(50000, 100)
+    agent = Q_Agent(actions=[0, 1])
+    agent.train(50000, 100)
 
     q_scores = pd.read_csv("/Users/renee/Downloads/FlappyBird_using_RL-master/Scores/qlearning.csv", index_col=0)
 
