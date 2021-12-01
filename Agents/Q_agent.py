@@ -10,131 +10,150 @@ class Q_Agent():
         self.actions = actions
         self.game = Game()
         self.Q = defaultdict(float)
-        self.initial_epsilon = epsilon
-        self.discount = discount
-        self.alpha = alpha
+        self.first_epsilon = epsilon
+        self.gamma = discount
+        self.learning_rate = alpha
 
     def select_action(self, state):
-        """Exploration and exploitation"""
+        """Select action corresponding to maximum reward"""
+
         if random.random() < self.epsilon:
             return np.random.choice(self.game.action_space.n)
 
-        qValues = [self.Q.get((state, action), 0) for action in self.actions]
+        # Get rewards for all possible actions in the current state
+        qList = [self.Q.get((state, action), 0) for action in self.actions]
 
-        if qValues[0] < qValues[1]:
+        # Select action yielding maximum reward
+        if qList[0] < qList[1]:
             return 1
-        elif qValues[0] > qValues[1]:
+        elif qList[0] > qList[1]:
             return 0
         else:
             return np.random.choice(self.game.action_space.n)
 
     def update_Q(self, state, action, reward, next_state):
-        """Update the Q value based on Q-Learning"""
+        """Based on the Q-learning algorithm, update the Q-value"""
 
-        next_Q = [self.Q.get((next_state, a), 0) for a in self.actions]
-        best_value = max(next_Q)
-        self.Q[(state, action)] = (1 - self.alpha) * \
-            self.Q.get((state, action), 0) + self.alpha * \
-            (reward + self.discount * best_value)
+        next_Q_values = [self.Q.get((next_state, a), 0) for a in self.actions]
+        # Select maximum value
+        max_value = max(next_Q_values)
+        # Update Q-value
+        self.Q[(state, action)] = (1 - self.learning_rate) * \
+            self.Q.get((state, action), 0) + self.learning_rate * \
+            (reward + self.gamma * max_value)
 
-    def train(self, n_iters, n_iters_eval):
-        """ Train the agent"""
+    def train(self, num_iter, num_iter_eval):
+        """ Train the Q-learning agent"""
 
-        done = False
-        max_score = 0
-        max_reward = 0
+        complete = False
+        maximum_score = 0
+        maximum_reward = 0
         self.game.seed(random.randint(0, 100))
-        test_scores = []
+        scores_test = []
 
-        for i in range(n_iters):
+        for i in range(num_iter):
 
-            self.epsilon = self.initial_epsilon
-            score = 0
-            total_reward = 0
+            # initialize score, total reward sum, current game state, etcetera
+            self.epsilon = self.first_epsilon
+            curr_score = 0
+            reward_sum = 0
             ob = self.game.reset()
-            list_sarsa = []
+            q_learning_list = []
             state = self.game.getGameState()
 
             while True:
-                # find the nest best action based on e-greedy approach
-                action = self.select_action(state)
-                next_state, reward, done, _ = self.game.step(action)
-                list_sarsa.append((state, action, reward, next_state))
+                # identify best future action based on achieving maximum reward
+                future_action = self.select_action(state)
+                next_state, reward, complete, _ = self.game.step(future_action)
+                q_learning_list.append((state, future_action, reward, next_state))
                 state = next_state
 
-                total_reward += reward
+                reward_sum += reward
                 if reward >= 1:
-                    score += 1
-                if done:
+                    curr_score += 1
+                if complete:
                     break
 
-            if score > max_score:
-                max_score = score
-            if total_reward > max_reward:
-                max_reward = total_reward
+            # update maximum score and reward
+            if curr_score > maximum_score:
+                maximum_score = curr_score
+            if reward_sum > maximum_reward:
+                maximum_reward = reward_sum
 
-            for (state, action, reward, next_state) in list_sarsa[::-1]:
-                self.update_Q(state, action, reward, next_state)
+            # update Q-values
+            for (state, future_action, reward, next_state) in q_learning_list[::-1]:
+                self.update_Q(state, future_action, reward, next_state)
 
+            # every 250 iterations, display iteration number
             if i % 250 == 0:
                 print("Iter: ", i)
 
-            # Evaluate the model after every 500 iterations
+            # every 500 iterations, evaluate the q-learning model
             if (i + 1) % 500 == 0:
-                max_score = self.evaluate(n_iter=n_iters_eval)
-                test_scores.append(max_score)
+                maximum_score = self.evaluate(n_iter=num_iter_eval)
+                scores_test.append(maximum_score)
 
-        df = pd.DataFrame(test_scores, columns=['scores'])
-        df.to_csv("qlearning.csv")
+        # save q-learning scores to relevant csv file for future use
+        save_score = pd.DataFrame(scores_test, columns=['curr_scores'])
+        save_score.to_csv("qlearning.csv")
+        # close the game
         self.game.close()
 
     def evaluate(self, n_iter):
-        """evaluates the agent"""
+        """evaluate the q-learning agent"""
 
         self.epsilon = 0
         self.game.seed(0)
 
-        done = False
-        max_score = 0
-        max_reward = 0
+        complete = False
+        maximum_score = 0
+        maximum_reward = 0
         output = defaultdict(int)
 
         for i in range(n_iter):
-            score = 0
-            total_reward = 0
+            # initialize current score, total reward sum, etcetera.
+            curr_score = 0
+            reward_sum = 0
             ob = self.game.reset()
-            state = self.game.getGameState()
+            curr_state = self.game.getGameState()
 
             while True:
-                action = self.select_action(state)
-                state, reward, done, _ = self.game.step(action)
-                total_reward += reward
+                action = self.select_action(curr_state)
+                curr_state, reward, complete, _ = self.game.step(action)
+                reward_sum += reward
                 if reward >= 1:
-                    score += 1
-                if done:
+                    curr_score += 1
+                if complete:
                     break
 
-            output[score] += 1
-            if score > max_score:
-                max_score = score
-            if total_reward > max_reward:
-                max_reward = total_reward
+            # update maximum score and reward
+            output[curr_score] += 1
+            if curr_score > maximum_score:
+                maximum_score = curr_score
+            if reward_sum > maximum_reward:
+                maximum_reward = reward_sum
 
+        # close the game
         self.game.close()
-        print("Max Score on Evaluation: ", max_score)
+        # display the maximum score
+        print("Max score on Evaluation: ", maximum_score)
 
-        return max_score
+        return maximum_score
 
 if __name__ == "__main__":
+    # initialize and train the q-learning agent
     agent = Q_Agent(actions=[0, 1])
     agent.train(50000, 100)
 
-    q_scores = pd.read_csv("/Users/renee/Downloads/FlappyBird_using_RL-master/Scores/qlearning.csv", index_col=0)
+    # read in q-learning scores from relevant csv file
+    q_curr_scores = pd.read_csv("/Users/renee/Downloads/FlappyBird_using_RL-master/curr_scores/qlearning.csv", index_col=0)
 
     i = list(range(0, 50001, 500))[1:]
-    q_scores.index = i[:80]
+    q_curr_scores.index = i[:80]
 
-    plt.plot(q_scores['scores'][:80])
+    # plot the q-learning scores
+    plt.plot(q_curr_scores['curr_scores'][:80])
     plt.legend(['Q-Learning'])
 
+    # display the created plot
     plt.show()
