@@ -143,12 +143,12 @@ class Q_Agent():
 if __name__ == "__main__":
     # initialize and train the q-learning agent
     agent = Q_Agent(actions=[0, 1])
-    agent.train(50000, 100)
+    agent.train(75000, 100)
 
     # read in q-learning scores from relevant csv file
     q_curr_scores = pd.read_csv("/Users/renee/Downloads/FlappyBird_using_RL-master/curr_scores/qlearning.csv", index_col=0)
 
-    i = list(range(0, 50001, 500))[1:]
+    i = list(range(0, 75001, 500))[1:]
     q_curr_scores.index = i[:80]
 
     # plot the q-learning scores
